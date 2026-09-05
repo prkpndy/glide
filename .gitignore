@@ -1,0 +1,16 @@
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/node_modules/
+contracts/lib/
+
+# node
+node_modules/
+web/.next/
+web/out/
+
+.env
+.env.*
+!.env.example
+.DS_Store
