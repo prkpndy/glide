@@ -1,0 +1,62 @@
+{
+  "contracts/lib/aqua": {
+    "rev": "81c26e4619ce21556ab02b3284ee2685de21fb18"
+  },
+  "contracts/lib/openzeppelin-contracts": {
+    "rev": "c64a1edb67b6e3f4a15cca8909c9482ad33a02b0"
+  },
+  "contracts/lib/solady": {
+    "rev": "acd959aa4bd04720d640bf4e6a5c71037510cc4b"
+  },
+  "contracts/lib/solidity-utils": {
+    "rev": "2d91bb67665467afc06907a69513b0fa66c46f0d"
+  },
+  "contracts/lib/swap-vm": {
+    "rev": "f09a41e689240adc645934f965c8061749397cd2"
+  },
+  "contracts/lib/v4-periphery": {
+    "rev": "dce236d4e2057422d0791d9a973a58765eb46f65"
+  },
+  "lib/aqua": {
+    "tag": {
+      "name": "v1.0.0",
+      "rev": "81c26e4619ce21556ab02b3284ee2685de21fb18"
+    }
+  },
+  "lib/forge-std": {
+    "tag": {
+      "name": "v1.16.2",
+      "rev": "bf647bd6046f2f7da30d0c2bf435e5c76a780c1b"
+    }
+  },
+  "lib/openzeppelin-contracts": {
+    "tag": {
+      "name": "v5.4.0",
+      "rev": "c64a1edb67b6e3f4a15cca8909c9482ad33a02b0"
+    }
+  },
+  "lib/solady": {
+    "tag": {
+      "name": "v0.1.26",
+      "rev": "acd959aa4bd04720d640bf4e6a5c71037510cc4b"
+    }
+  },
+  "lib/solidity-utils": {
+    "tag": {
+      "name": "6.9.10",
+      "rev": "2d91bb67665467afc06907a69513b0fa66c46f0d"
+    }
+  },
+  "lib/swap-vm": {
+    "rev": "f09a41e68924"
+  },
+  "lib/v4-core": {
+    "tag": {
+      "name": "v4.0.0",
+      "rev": "e50237c43811bd9b526eff40f26772152a42daba"
+    }
+  },
+  "lib/v4-periphery": {
+    "rev": "dce236d4e2057422d0791d9a973a58765eb46f65"
+  }
+}

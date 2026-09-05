@@ -3,7 +3,6 @@ contracts/out/
 contracts/cache/
 contracts/broadcast/
 contracts/node_modules/
-contracts/lib/
 
 # node
 node_modules/
