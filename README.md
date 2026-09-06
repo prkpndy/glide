@@ -35,3 +35,13 @@ The behaviour tests include a glide simulation and swaps settled through Aqua.
 ```bash
 forge test --match-path test/GlideSwap.t.sol
 ```
+
+## Client helpers and invariants
+
+`src/periphery/GlideLens.sol` builds orders and ship bytes, encodes taker traits,
+and reads quotes and position state. `test/GlideInvariants.t.sol` applies SwapVM's
+CoreInvariants harness to fixed, extreme and gliding weights, with and without fees.
+
+```bash
+forge test --match-path test/GlideInvariants.t.sol
+```
