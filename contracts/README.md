@@ -12,3 +12,13 @@ rounding and trade caps. `test/WeightedMath.t.sol` covers the curve and rounding
 forge build
 forge test --match-path test/WeightedMath.t.sol
 ```
+
+## Glide instruction and router
+
+`GlideSwap` interpolates token-A's weight across the time window. `GlideOpcodes`
+adds the instruction to the Aqua opcode set and `GlideSwapVMRouter` executes it.
+The behaviour tests include a glide simulation and swaps settled through Aqua.
+
+```bash
+forge test --match-path test/GlideSwap.t.sol
+```
