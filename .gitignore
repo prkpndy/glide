@@ -1,5 +1,6 @@
 # foundry
 contracts/out/
+contracts/out-v4/
 contracts/cache/
 contracts/broadcast/
 contracts/node_modules/
