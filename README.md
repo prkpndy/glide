@@ -59,3 +59,13 @@ running hook tests; the test helper loads `out-v4/PoolManager.sol/PoolManager.js
 FOUNDRY_PROFILE=v4 forge build
 forge test --no-match-path 'test/fork/*'
 ```
+
+## Unichain fork tests
+
+The fork suite uses real Aqua and PoolManager deployments with USDC/WETH at block
+58230608. It covers direct swaps, both Uniswap directions, time-dependent quotes
+and docking. Network access is required; `UNICHAIN_RPC_URL` overrides the public RPC.
+
+```bash
+forge test --match-path test/fork/UnichainFork.t.sol
+```
