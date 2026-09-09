@@ -56,3 +56,21 @@ and docking. Network access is required; `UNICHAIN_RPC_URL` overrides the public
 ```bash
 forge test --match-path test/fork/UnichainFork.t.sol
 ```
+
+## Local demo
+
+Run anvil in one terminal, then run the demo script from `contracts` in another:
+
+```bash
+anvil --port 8546 --fork-url https://mainnet.unichain.org --fork-block-number 58230608 --chain-id 130
+```
+
+```bash
+RPC=http://127.0.0.1:8546 ./scripts/demo.sh
+```
+
+`script/Deploy.s.sol` deploys the router, lens, hook and swap helper.
+`script/Ship.s.sol` derives the start weight, ships a position and registers its route.
+`script/Swap.s.sol` fills it directly or through Uniswap. The runbook also advances
+fork time. Deployment and position JSON go in `deployments/`; large amounts,
+weights and prices are written as decimal strings for JavaScript readers.

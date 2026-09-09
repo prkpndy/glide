@@ -5,7 +5,7 @@ libs = ["lib"]
 optimizer = true
 optimizer_runs = 700
 via_ir = true
-fs_permissions = [{ access = "read", path = "./" }]
+fs_permissions = [{ access = "read", path = "./" }, { access = "read-write", path = "./deployments" }]
 
 [fuzz]
 runs = 256
