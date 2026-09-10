@@ -87,3 +87,22 @@ RPC=http://127.0.0.1:8546 ./scripts/demo.sh
 `script/Swap.s.sol` fills it directly or through Uniswap. The runbook also advances
 fork time. Deployment and position JSON go in `deployments/`; large amounts,
 weights and prices are written as decimal strings for JavaScript readers.
+
+## Web app
+
+The Next.js and viem app talks to the local Unichain fork using anvil's maker and
+taker accounts. Create derives the starting value split, previews the path, ships
+to Aqua and registers the Uniswap route. Position shows target versus actual
+value share, balances, earned fees and swap history, and lets the maker dock.
+
+After building the contracts and running the local demo:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+Open http://localhost:3000. The predev script synchronizes contract ABIs and
+deployment JSON into the ignored `web/generated/` directory. Use `npm run sync`
+after changing a deployment or shipping a position from the contract scripts.
