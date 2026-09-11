@@ -1,10 +1,12 @@
-import { erc20Abi, maxUint256, type Address, type Hex } from "viem";
-import { AquaAbi, GlideHookAbi, GlideLensAbi, GlideSwapVMRouterAbi } from "@/generated/abis";
-import { publicClient, type Wallet } from "./clients";
+import { encodeAbiParameters, erc20Abi, maxUint256, zeroAddress, type Address, type Hex } from "viem";
+import { AquaAbi, GlideHookAbi, GlideLensAbi, GlideSwapVMRouterAbi, PoolSwapTestAbi } from "@/generated/abis";
+import { publicClient, rpc, type Wallet } from "./clients";
 import { deployment, WAD, type GlideParams } from "./config";
 
 export const MIN_WEIGHT = 10n ** 16n;
 export const MAX_WEIGHT = 99n * 10n ** 16n;
+const MIN_SQRT_PRICE = 4295128739n;
+const MAX_SQRT_PRICE = 1461446703485210103287273052203988822378723970342n;
 
 function d() {
   if (!deployment) throw new Error("no deployment for this chain; run contracts/scripts/demo.sh then npm run sync");
@@ -118,6 +120,16 @@ export async function readState(maker: Address, p: GlideParams): Promise<Positio
   return { active: s.active, balanceA: s.balanceA, balanceB: s.balanceB, wA: s.wA, spotBPerA: s.spotBPerA };
 }
 
+export async function quote(maker: Address, p: GlideParams, isExactIn: boolean, aToB: boolean, amount: bigint) {
+  const [amountIn, amountOut] = await publicClient.readContract({
+    address: d().lens,
+    abi: GlideLensAbi,
+    functionName: "quote",
+    args: [maker, lensParams(p), isExactIn, aToB, amount],
+  });
+  return { amountIn, amountOut };
+}
+
 export async function routeFor() {
   const [maker] = await publicClient.readContract({ address: d().hook, abi: GlideHookAbi, functionName: "route", args: [poolKey()] });
   return maker;
@@ -177,6 +189,41 @@ export async function dock(wallet: Wallet, p: GlideParams) {
   return hash;
 }
 
+export async function swapDirect(wallet: Wallet, maker: Address, p: GlideParams, aToB: boolean, amountIn: bigint, minOut: bigint) {
+  const dep = d();
+  const tokenIn = aToB ? p.tokenA : p.tokenB;
+  await ensureAllowance(wallet, tokenIn, dep.router, amountIn);
+  const order = await buildOrder(maker, p);
+  const takerData = await publicClient.readContract({
+    address: dep.lens,
+    abi: GlideLensAbi,
+    functionName: "takerData",
+    args: [true, aToB, minOut, zeroAddress, 0],
+  });
+  const hash = await wallet.writeContract({ address: dep.router, abi: GlideSwapVMRouterAbi, functionName: "swap", args: [order, amountIn, takerData] });
+  await wait(hash);
+  return hash;
+}
+
+export async function swapViaUniswap(wallet: Wallet, aToB: boolean, amountIn: bigint, minOut: bigint) {
+  const dep = d();
+  const tokenIn = aToB ? dep.tokenA : dep.tokenB;
+  await ensureAllowance(wallet, tokenIn, dep.swapRouter, amountIn);
+  const hash = await wallet.writeContract({
+    address: dep.swapRouter,
+    abi: PoolSwapTestAbi,
+    functionName: "swap",
+    args: [
+      poolKey(),
+      { zeroForOne: aToB, amountSpecified: -amountIn, sqrtPriceLimitX96: aToB ? MIN_SQRT_PRICE + 1n : MAX_SQRT_PRICE - 1n },
+      { takeClaims: false, settleUsingBurn: false },
+      encodeAbiParameters([{ type: "uint256" }], [minOut]),
+    ],
+  });
+  await wait(hash);
+  return hash;
+}
+
 // ---- history ----
 
 export type SwapEvent = {
@@ -221,4 +268,11 @@ export async function swapsFor(hash: Hex): Promise<SwapEvent[]> {
     });
   }
   return out;
+}
+
+// ---- fork time travel ----
+
+export async function advanceTime(seconds: number) {
+  await rpc("evm_increaseTime", [seconds]);
+  await rpc("evm_mine", []);
 }

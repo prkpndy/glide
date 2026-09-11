@@ -222,7 +222,7 @@ export default function PositionPage() {
               Trades <span className="tag">router Swapped events for this order</span>
             </h2>
             {swaps.length === 0 ? (
-              <div className="empty">no trades yet: use the contract swap script to trade against the position</div>
+              <div className="empty">no trades yet: use the demo tools to arb the position or swap through Uniswap</div>
             ) : (
               <table>
                 <thead>

@@ -106,3 +106,6 @@ npm run dev
 Open http://localhost:3000. The predev script synchronizes contract ABIs and
 deployment JSON into the ignored `web/generated/` directory. Use `npm run sync`
 after changing a deployment or shipping a position from the contract scripts.
+
+Demo tools adds fork time travel, an arbitrage loop and direct or Uniswap swaps.
+The navigation includes `/demo` alongside Create and Position.

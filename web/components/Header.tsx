@@ -9,6 +9,7 @@ import { deployment, RPC_URL } from "@/lib/config";
 const links = [
   { href: "/", label: "Create" },
   { href: "/position", label: "Position" },
+  { href: "/demo", label: "Demo tools" },
 ] as const;
 
 export default function Header() {
