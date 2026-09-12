@@ -39,12 +39,14 @@ The maker is the star of the product. Takers do not need to know Glide exists; t
 
 ### 4.1 Creating a position (maker)
 
-1. Connect a wallet holding both tokens, or just one.
-2. Choose the pair, e.g. ETH and USDC.
-3. Choose the **start split**, the **end split**, and the **window** (start and end time). A preview chart shows the path.
-4. Choose a **fee** takers pay on each trade, e.g. 0.30%.
-5. Optionally set a **price guardrail**: an oracle reference so the position will not sell far below the market.
+1. Connect a wallet holding both tokens. Both sides must be non-zero: a weighted curve is undefined with an empty reserve, so a maker who holds only ETH first needs a little USDC (or the reverse).
+2. Choose the pair, e.g. ETH and USDC, and how much of each to expose.
+3. Enter reference prices. The **start split** is *derived* from the value split of the exposed amounts, so the position opens exactly at the market price. If it were chosen freely, arbitrage would take the gap from the maker in the first trade.
+4. Choose the **end split** and the **window**. A preview chart shows the path.
+5. Choose a **fee** takers pay on each trade, e.g. 0.30%.
 6. Approve the tokens once and click **Ship**. The position is live. Tokens remain in the wallet.
+
+Weights are clamped to the 1% to 99% range on both ends.
 
 ### 4.2 While the position is live
 
@@ -109,7 +111,8 @@ Yes, we build a frontend. It is what makes "your tokens never leave your wallet"
 ## 7. What we are not building
 
 - No support for more than two tokens per position.
-- No non-linear glide paths (only linear interpolation between start and end split). Could be a stretch goal.
+- No non-linear glide paths (only linear interpolation between start and end split). Additive later: a second opcode with a piecewise schedule.
+- No price guardrail opcode. `RequireMinRate` from stock SwapVM can be added to the program later without touching the curve.
 - No keeper, bot, or off-chain service.
 - No mainnet deployment. Fork only, per the 1inch rules.
 - No fee sharing, governance, or token.

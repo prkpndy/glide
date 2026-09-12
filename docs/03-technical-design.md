@@ -522,7 +522,31 @@ if its tests pass before submission.
 
 ---
 
-## 13. Open risks
+## 13. What changed during implementation
+
+Recorded after the build so the doc matches the code.
+
+- **`BaseHook` no longer exists in v4-periphery main.** `GlideHook` implements `IHooks` directly with reverting stubs
+  and calls `Hooks.validateHookPermissions` in its constructor. `HookMiner` lives in `v4-periphery/test/shared/`.
+- **PoolManager is built in its own Foundry profile.** It pins `solc 0.8.26` and fails under `via_ir`, while SwapVM
+  pins `0.8.30`. `FOUNDRY_PROFILE=v4 forge build` writes `out-v4/`, and `test/utils/V4Artifacts.sol` deploys the
+  PoolManager from that artifact. `Deployers.sol` could not be used for the same reason; the hook test wires
+  `PoolSwapTest` and `PoolModifyLiquidityTest` by hand.
+- **Flash accounting float.** `beforeSwap` takes the swapper's input from the PoolManager before the swapper settles,
+  so the manager must already hold that much of the token. True on any live deployment; the unit test pre-funds the
+  fresh manager to simulate other pools. Documented in the hook and in FEEDBACK.md.
+- **Invariant tolerances.** Symmetry and additivity run at 1e9 wei on 1e18-scale amounts (about 1e-9 tokens), and each
+  fixture's trade sizes are chosen so `3 × amount` stays under the 30% caps on both sides. See the header of
+  `test/GlideInvariants.t.sol`.
+- **Big numbers in JSON.** `Ship.s.sol` writes weights, amounts and prices as decimal strings so the web app can parse
+  them without precision loss.
+- **Demo accounts instead of an injected wallet.** The web app signs with anvil's maker and taker keys via viem so the
+  demo never depends on a browser extension talking to a fork. `GlideLens` does all order and taker-traits encoding.
+- **Deploy uses the canonical CREATE2 deployer** (`0x4e59…956C`, present on Unichain) so the mined hook address is
+  reproducible from a script.
+- **Port 8546.** The runbook expects anvil on `--port 8546` when 8545 is already taken.
+
+## 14. Open risks (as written before implementation)
 
 - **swap-vm as npm dependency.** `package.json` says `@1inch/swap-vm` 0.0.6 but it may not be on the registry. Fallback is the git submodule. Decide in the first hour.
 - **via_ir compile time.** SwapVM needs it. Expect 1 to 3 minutes per full forge build; use `forge test --match-path` aggressively.
