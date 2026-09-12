@@ -109,3 +109,15 @@ after changing a deployment or shipping a position from the contract scripts.
 
 Demo tools adds fork time travel, an arbitrage loop and direct or Uniswap swaps.
 The navigation includes `/demo` alongside Create and Position.
+
+## Browser smoke test
+
+With the local fork and web app running, the Playwright script drives creation,
+time travel, arbitrage and a Uniswap swap in Chromium. From `web`:
+
+```bash
+npx playwright install chromium
+node scripts/e2e.mjs
+```
+
+Screenshots are saved under the ignored `web/e2e-shots/` directory.
