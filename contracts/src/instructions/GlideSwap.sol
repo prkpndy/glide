@@ -68,8 +68,11 @@ library GlideSwap {
 
     function exec(Context memory ctx, bytes calldata args) internal view {
         (uint40 start, uint32 duration, uint64 wA0, uint64 wA1) = parse(args);
+        applyWeight(ctx, weightAt(block.timestamp, start, duration, wA0, wA1));
+    }
 
-        uint256 wA = weightAt(block.timestamp, start, duration, wA0, wA1);
+    /// @notice Price the swap registers on the weighted curve with token-A weight `wA`. Shared with GlideSwapPiecewise.
+    function applyWeight(Context memory ctx, uint256 wA) internal pure {
         (uint256 wIn, uint256 wOut) = ctx.query.tokenIn < ctx.query.tokenOut
             ? (wA, ONE - wA)
             : (ONE - wA, wA);

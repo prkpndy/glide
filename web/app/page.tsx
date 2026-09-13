@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { parseUnits } from "viem";
 import WeightChart from "@/components/WeightChart";
 import { deployment, savePosition, WAD, type GlideParams } from "@/lib/config";
-import { balanceOf, deriveStartWeight, ship, spotBPerA, tokenMeta, usdValue, type TokenMeta } from "@/lib/glide";
+import { balanceOf, deriveStartWeight, schedule, SHAPES, ship, spotBPerA, tokenMeta, usdValue, type Shape, type TokenMeta } from "@/lib/glide";
 import { fmtAmount, fmtPct, pctToWad, wadToPct } from "@/lib/format";
 import { useSession } from "@/lib/session";
 
@@ -24,6 +24,7 @@ export default function CreatePage() {
   const [endPct, setEndPct] = useState(70);
   const [hours, setHours] = useState(24);
   const [feePct, setFeePct] = useState("0.3");
+  const [shape, setShape] = useState<Shape>("linear");
 
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
@@ -53,7 +54,8 @@ export default function CreatePage() {
       const wA1 = pctToWad(endPct);
       const feeBps = Math.round(Number(feePct || "0") * 1e5); // percent -> 1e7 units
       const start = s.now || Math.floor(Date.now() / 1000);
-      const params: GlideParams = { tokenA: metaA.address, tokenB: metaB.address, feeBps, start, duration: hours * 3600, wA0, wA1, salt: BigInt(start) };
+      const sched = schedule(shape, wA0, wA1, hours * 3600);
+      const params: GlideParams = { tokenA: metaA.address, tokenB: metaB.address, feeBps, start, duration: hours * 3600, wA0, wA1, salt: BigInt(start), ...sched };
       // pool spot (B per A) vs reference, in raw units
       const spot = a > 0n && b > 0n ? spotBPerA(a, wA0, b) : 0n;
       const ref = pB > 0n ? (pA * 10n ** BigInt(metaB.decimals) * WAD) / (pB * 10n ** BigInt(metaA.decimals)) : 0n;
@@ -62,7 +64,7 @@ export default function CreatePage() {
     } catch {
       return undefined;
     }
-  }, [metaA, metaB, amountA, amountB, priceA, priceB, endPct, hours, feePct, s.now]);
+  }, [metaA, metaB, amountA, amountB, priceA, priceB, endPct, hours, feePct, shape, s.now]);
 
   const problems: string[] = [];
   if (derived) {
@@ -152,6 +154,20 @@ export default function CreatePage() {
             <input type="range" min={1} max={99} value={endPct} onChange={(e) => setEndPct(Number(e.target.value))} />
           </div>
 
+          <div className="field">
+            <label>
+              <span>path shape</span>
+              <span className="mono">{SHAPES.find((x) => x.id === shape)?.hint}</span>
+            </label>
+            <select value={shape} onChange={(e) => setShape(e.target.value as Shape)}>
+              {SHAPES.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="row">
             <div className="field">
               <label>
@@ -189,6 +205,7 @@ export default function CreatePage() {
           </div>
           <p className="muted" style={{ marginTop: 10, fontSize: 12 }}>
             Ship records virtual balances on Aqua and points the Uniswap pool at your position. No tokens move until someone trades.
+            {shape !== "linear" && " Non-linear shapes use the piecewise opcode with a 12-point schedule."}
           </p>
         </div>
 

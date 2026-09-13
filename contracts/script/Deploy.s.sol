@@ -37,18 +37,22 @@ contract Deploy is Script {
 
         uint160 flags = Hooks.BEFORE_SWAP_FLAG | Hooks.BEFORE_SWAP_RETURNS_DELTA_FLAG | Hooks.BEFORE_ADD_LIQUIDITY_FLAG;
 
+        // every deployment goes through the CREATE2 factory: deterministic addresses, and forge does not have to
+        // match plain-CREATE initcode against artifacts (which mis-decoded the router's constructor args)
+        bytes32 salt = keccak256(abi.encodePacked("glide", vm.envOr("DEPLOY_SALT", block.timestamp)));
+
         vm.startBroadcast(pk);
 
-        GlideSwapVMRouter router = new GlideSwapVMRouter(aqua, weth, deployer);
-        GlideLens lens = new GlideLens(ISwapVM(address(router)), IAqua(aqua));
+        GlideSwapVMRouter router = new GlideSwapVMRouter{ salt: salt }(aqua, weth, deployer);
+        GlideLens lens = new GlideLens{ salt: salt }(ISwapVM(address(router)), IAqua(aqua));
 
-        (address expectedHook, bytes32 salt) = HookMiner.find(
+        (address expectedHook, bytes32 hookSalt) = HookMiner.find(
             CREATE2_DEPLOYER, flags, type(GlideHook).creationCode, abi.encode(IPoolManager(pm), ISwapVM(address(router)))
         );
-        GlideHook hook = new GlideHook{ salt: salt }(IPoolManager(pm), ISwapVM(address(router)));
+        GlideHook hook = new GlideHook{ salt: hookSalt }(IPoolManager(pm), ISwapVM(address(router)));
         require(address(hook) == expectedHook, "hook address mismatch");
 
-        PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(pm));
+        PoolSwapTest swapRouter = new PoolSwapTest{ salt: salt }(IPoolManager(pm));
 
         (address tokenA, address tokenB) = usdc < weth ? (usdc, weth) : (weth, usdc);
         PoolKey memory key = PoolKey({

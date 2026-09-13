@@ -17,6 +17,26 @@ import { Common } from "./Common.s.sol";
 ///      DURATION=86400 FEE_BPS=30000 forge script script/Ship.s.sol --rpc-url $RPC --broadcast
 ///      PRICE_* are WAD USD per whole token and only serve to derive the start weight from the current value split.
 contract Ship is Common {
+    function _toUint256(uint64[] memory a) internal pure returns (uint256[] memory r) {
+        r = new uint256[](a.length);
+        for (uint256 i = 0; i < a.length; i++) r[i] = a[i];
+    }
+
+    function _toUint256(uint32[] memory a) internal pure returns (uint256[] memory r) {
+        r = new uint256[](a.length);
+        for (uint256 i = 0; i < a.length; i++) r[i] = a[i];
+    }
+
+    function _toUint64(uint256[] memory a) internal pure returns (uint64[] memory r) {
+        r = new uint64[](a.length);
+        for (uint256 i = 0; i < a.length; i++) r[i] = uint64(a[i]);
+    }
+
+    function _toUint32(uint256[] memory a) internal pure returns (uint32[] memory r) {
+        r = new uint32[](a.length);
+        for (uint256 i = 0; i < a.length; i++) r[i] = uint32(a[i]);
+    }
+
     function run() external {
         Deployment memory d = _deployment();
         uint256 pk = vm.envUint("MAKER_PK");
@@ -36,8 +56,17 @@ contract Ship is Common {
             duration: uint32(vm.envOr("DURATION", uint256(1 days))),
             wA0: lens.deriveStartWeight(valueA, valueB),
             wA1: uint64(vm.envUint("END_WEIGHT_A")),
-            salt: uint64(vm.envOr("SALT", block.timestamp))
+            salt: uint64(vm.envOr("SALT", block.timestamp)),
+            weights: new uint64[](0),
+            durations: new uint32[](0)
         });
+        // optional piecewise schedule: WEIGHTS="w0,w1,...,wn" (WAD) and DURATIONS="d1,...,dn" (seconds, sum == DURATION)
+        if (bytes(vm.envOr("WEIGHTS", string(""))).length > 0) {
+            p.weights = _toUint64(vm.envUint("WEIGHTS", ","));
+            p.durations = _toUint32(vm.envUint("DURATIONS", ","));
+            p.wA0 = p.weights[0];
+            p.wA1 = p.weights[p.weights.length - 1];
+        }
         ISwapVM.Order memory order = lens.buildOrder(maker, p);
         bytes32 orderHash = lens.orderHash(maker, p);
 
@@ -65,7 +94,9 @@ contract Ship is Common {
         // large values are written as decimal strings so JavaScript readers do not lose precision
         vm.serializeString(pj, "wA0", vm.toString(p.wA0));
         vm.serializeString(pj, "wA1", vm.toString(p.wA1));
-        string memory paramsJson = vm.serializeString(pj, "salt", vm.toString(p.salt));
+        vm.serializeString(pj, "salt", vm.toString(p.salt));
+        vm.serializeUint(pj, "weights", _toUint256(p.weights));
+        string memory paramsJson = vm.serializeUint(pj, "durations", _toUint256(p.durations));
 
         string memory j = "position";
         vm.serializeAddress(j, "maker", maker);
@@ -77,6 +108,7 @@ contract Ship is Common {
         string memory out = vm.serializeString(j, "params", paramsJson);
         vm.writeJson(out, _positionPath());
 
+        console.log("shape     ", p.weights.length > 0 ? "piecewise" : "linear");
         console.log("maker     ", maker);
         console.log("orderHash ", vm.toString(orderHash));
         console.log("wA0       ", p.wA0);

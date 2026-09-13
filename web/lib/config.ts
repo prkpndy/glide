@@ -39,6 +39,9 @@ export type GlideParams = {
   wA0: bigint; // WAD
   wA1: bigint; // WAD
   salt: bigint;
+  // optional piecewise schedule; empty = straight line. weights[0] == wA0, weights[last] == wA1, sum(durations) == duration
+  weights: bigint[];
+  durations: number[];
 };
 
 export type Position = {
@@ -68,6 +71,8 @@ type RawPosition = {
     wA0: string | number;
     wA1: string | number;
     salt: string | number;
+    weights?: (string | number)[];
+    durations?: (string | number)[];
   };
 };
 
@@ -87,6 +92,8 @@ function parsePosition(r: RawPosition): Position {
       wA0: BigInt(r.params.wA0),
       wA1: BigInt(r.params.wA1),
       salt: BigInt(r.params.salt),
+      weights: (r.params.weights ?? []).map((x) => BigInt(x)),
+      durations: (r.params.durations ?? []).map((x) => Number(x)),
     },
   };
 }
@@ -107,6 +114,8 @@ function serializePosition(p: Position): RawPosition {
       wA0: p.params.wA0.toString(),
       wA1: p.params.wA1.toString(),
       salt: p.params.salt.toString(),
+      weights: p.params.weights.map((x) => x.toString()),
+      durations: p.params.durations,
     },
   };
 }

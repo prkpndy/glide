@@ -9,6 +9,7 @@ import { FeeFlatIn } from "@1inch/swap-vm/src/instructions/FeeFlat.sol";
 import { Salt } from "@1inch/swap-vm/src/instructions/Controls.sol";
 
 import { GlideSwap } from "../instructions/GlideSwap.sol";
+import { GlideSwapPiecewise } from "../instructions/GlideSwapPiecewise.sol";
 import { WeightedMath } from "../libs/WeightedMath.sol";
 
 /// @title GlideLens
@@ -26,6 +27,10 @@ contract GlideLens {
         uint64 wA0;         // WAD weight of tokenA at start
         uint64 wA1;         // WAD weight of tokenA at end
         uint64 salt;
+        // optional piecewise schedule: empty = straight line from wA0 to wA1 over `duration`;
+        // otherwise weights[0] == wA0, weights[last] == wA1 and sum(durations) == duration
+        uint64[] weights;
+        uint32[] durations;
     }
 
     struct State {
@@ -37,6 +42,7 @@ contract GlideLens {
     }
 
     error GlideLensTokensNotSorted();
+    error GlideLensScheduleMismatch();
 
     ISwapVM public immutable ROUTER;
     IAqua public immutable AQUA;
@@ -51,9 +57,25 @@ contract GlideLens {
     function program(GlideParams memory p) public pure returns (bytes memory) {
         return bytes.concat(
             p.feeBps > 0 ? FeeFlatIn.build(p.feeBps) : bytes(""),
-            GlideSwap.build(p.start, p.duration, p.wA0, p.wA1),
+            _curve(p),
             Salt.build(p.salt)
         );
+    }
+
+    function isPiecewise(GlideParams memory p) public pure returns (bool) {
+        return p.weights.length > 0;
+    }
+
+    function _curve(GlideParams memory p) internal pure returns (bytes memory) {
+        if (!isPiecewise(p)) return GlideSwap.build(p.start, p.duration, p.wA0, p.wA1);
+
+        uint256 total;
+        for (uint256 i = 0; i < p.durations.length; i++) total += p.durations[i];
+        require(
+            p.weights[0] == p.wA0 && p.weights[p.weights.length - 1] == p.wA1 && total == p.duration,
+            GlideLensScheduleMismatch()
+        );
+        return GlideSwapPiecewise.build(p.start, p.weights, p.durations);
     }
 
     function buildOrder(address maker, GlideParams memory p) public pure returns (ISwapVM.Order memory) {
@@ -141,7 +163,18 @@ contract GlideLens {
     // ---- state ----
 
     function weightNow(GlideParams memory p) public view returns (uint256) {
-        return GlideSwap.weightAt(block.timestamp, p.start, p.duration, p.wA0, p.wA1);
+        return weightAt(p, block.timestamp);
+    }
+
+    function weightAt(GlideParams memory p, uint256 timestamp) public view returns (uint256) {
+        if (!isPiecewise(p)) return GlideSwap.weightAt(timestamp, p.start, p.duration, p.wA0, p.wA1);
+        return this.piecewiseWeightAt(GlideSwapPiecewise.build(p.start, p.weights, p.durations), timestamp);
+    }
+
+    /// @dev external so the packed args can be read as calldata by the instruction's own parser
+    function piecewiseWeightAt(bytes calldata curveInstruction, uint256 timestamp) external pure returns (uint256) {
+        // skip the 2-byte [opcode, argsLength] header
+        return GlideSwapPiecewise.weightAt(curveInstruction[2:], timestamp);
     }
 
     function state(address maker, GlideParams memory p) external view returns (State memory s) {

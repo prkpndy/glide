@@ -20,6 +20,8 @@ console.log("1. create page");
 await page.goto(base + "/");
 await ready();
 await page.waitForFunction(() => document.body.innerText.includes("Start share is derived"), null, { timeout: 30000 });
+await page.locator("select").first().selectOption(process.env.SHAPE ?? "s-curve");
+await page.waitForTimeout(500);
 await shot("1-create");
 const ship = page.getByRole("button", { name: /Approve & ship/ });
 await page.waitForFunction(() => { const b = [...document.querySelectorAll("button")].find((x) => x.textContent.includes("Approve & ship")); return b && !b.disabled; }, null, { timeout: 30000 });

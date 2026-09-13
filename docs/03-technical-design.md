@@ -546,6 +546,12 @@ Recorded after the build so the doc matches the code.
   reproducible from a script.
 - **Port 8546.** The runbook expects anvil on `--port 8546` when 8545 is already taken.
 
+- **Piecewise schedules.** `GlideSwapPiecewise` at `Opcode._55` encodes
+  `[start, w0, (duration_i, w_{i+1})…]`, up to 20 segments in the 255-byte args limit, and reuses
+  `GlideSwap.applyWeight` for the curve. `GlideParams` gained `weights[]`/`durations[]`; empty means the linear opcode.
+  The lens validates that the schedule's endpoints and total match `wA0`, `wA1`, `duration`. The app generates
+  schedules from six shape presets with 12 points (2 for the hold variants).
+
 ## 14. Open risks (as written before implementation)
 
 - **swap-vm as npm dependency.** `package.json` says `@1inch/swap-vm` 0.0.6 but it may not be on the registry. Fallback is the git submodule. Decide in the first hour.

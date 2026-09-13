@@ -93,7 +93,8 @@ export default function PositionPage() {
             {state && <span className={`badge ${state.active ? "live" : "off"}`}>{state.active ? "live" : "docked"}</span>}
           </h1>
           <p>
-            maker <span className="mono">{short(position.maker)}</span> · {fmtPct(p.wA0)} → {fmtPct(p.wA1)} {metaA?.symbol} over {fmtDuration(p.duration)} · fee{" "}
+            maker <span className="mono">{short(position.maker)}</span> · {fmtPct(p.wA0)} → {fmtPct(p.wA1)} {metaA?.symbol} over {fmtDuration(p.duration)}
+            {p.weights.length > 0 ? ` (${p.durations.length}-segment path)` : " (linear)"} · fee{" "}
             {(p.feeBps / 1e5).toFixed(2)}% · {v.hash && <span className="mono">{short(v.hash)}</span>}
           </p>
         </div>

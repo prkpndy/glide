@@ -24,18 +24,21 @@ Contribution**.
 
 ## For 1inch judges
 
-The new piece is one SwapVM instruction, **`GlideSwap`**, plus the math library under it, in a redeployed router.
+The new pieces are two SwapVM instructions, **`GlideSwap`** (straight-line schedule) and **`GlideSwapPiecewise`** (any
+piecewise-linear schedule), plus the math library under them, in a redeployed router.
 Everything settles through the official Aqua registry at `0x1111113CCf1426A8E30e2bfF5E005d929bF6a90a`.
 
 | What | Where |
 |---|---|
-| The opcode: time-interpolated weight, then the weighted curve. Terminal instruction, `view`, stateless in Aqua mode | [`contracts/src/instructions/GlideSwap.sol`](contracts/src/instructions/GlideSwap.sol) (`weightAt` L59, `exec` L69) |
+| The opcode: time-interpolated weight, then the weighted curve. Terminal instruction, `view`, stateless in Aqua mode | [`contracts/src/instructions/GlideSwap.sol`](contracts/src/instructions/GlideSwap.sol) (`weightAt` L59, `exec` L69, `applyWeight` L75) |
+| Second opcode at `Opcode._55`: the same curve on a piecewise-linear weight schedule (ease-in, S-curve, hold-then-move, up to 20 segments) | [`contracts/src/instructions/GlideSwapPiecewise.sol`](contracts/src/instructions/GlideSwapPiecewise.sol) (`weightAt` L77, `exec` L95) |
 | Weighted constant-mean math with maker-favouring rounding (Balancer V2 structure, solady `powWad` with an upward error bump, 30% trade caps) | [`contracts/src/libs/WeightedMath.sol`](contracts/src/libs/WeightedMath.sol) (`calcOutGivenIn` L30, `calcInGivenOut` L52, `powUp` L83) |
-| Opcode wired into the stock Aqua instruction set at slot `Opcode._52` (first free slot of the curve bank) | [`contracts/src/opcodes/GlideOpcodes.sol`](contracts/src/opcodes/GlideOpcodes.sol) L14 |
+| Both opcodes wired into the stock Aqua instruction set (`_52`, `_55`, the free slots of the curve bank) | [`contracts/src/opcodes/GlideOpcodes.sol`](contracts/src/opcodes/GlideOpcodes.sol) L15 |
 | Router = `Simulator` + `SwapVM` + Aqua opcodes + `GlideSwap` | [`contracts/src/routers/GlideSwapVMRouter.sol`](contracts/src/routers/GlideSwapVMRouter.sol) |
 | 1inch's `CoreInvariants` suite at fixed, extreme and gliding weights, with and without fees, at three points in time. Tolerances and why in the header | [`contracts/test/GlideInvariants.t.sol`](contracts/test/GlideInvariants.t.sol) |
 | The product as a test: an arbitrageur keeps the pool at the market price and the maker's value share tracks the glide path | [`contracts/test/GlideSwap.t.sol`](contracts/test/GlideSwap.t.sol) `test_GlideSimulation_ValueShareTracksWeight` L212 |
 | Math fuzzed against an unrounded reference: maker never overpays, invariant never decreases, concavity, round trip | [`contracts/test/WeightedMath.t.sol`](contracts/test/WeightedMath.t.sol) |
+| Piecewise schedule: exact weights at every breakpoint, a one-segment schedule quotes identically to the linear opcode, prices freeze during a hold, invariants inside a segment and inside a hold | [`contracts/test/GlidePiecewise.t.sol`](contracts/test/GlidePiecewise.t.sol) |
 | Real Aqua on a Unichain mainnet fork, USDC/WETH, ship → swap → dock | [`contracts/test/fork/UnichainFork.t.sol`](contracts/test/fork/UnichainFork.t.sol) |
 
 Design notes worth a minute:
@@ -78,7 +81,7 @@ Requirements: Foundry (forge 1.5+), Node 20+, network access for the Unichain fo
 cd contracts
 forge build                          # SwapVM + Glide, solc 0.8.30, via_ir
 FOUNDRY_PROFILE=v4 forge build       # Uniswap PoolManager (solc 0.8.26, no via_ir) -> out-v4/
-forge test --no-match-path 'test/fork/*'          # 41 unit, fuzz, invariant and hook tests
+forge test --no-match-path 'test/fork/*'          # 47 unit, fuzz, invariant and hook tests
 forge test --match-path test/fork/UnichainFork.t.sol   # needs RPC; UNICHAIN_RPC_URL overrides the public one
 
 # end-to-end on a local fork (terminal 1)
@@ -91,8 +94,8 @@ cd ../web && npm install && npm run dev      # http://localhost:3000, RPC defaul
 node scripts/e2e.mjs                         # drives create → time travel → arb → Uniswap swap in headless Chromium
 ```
 
-The app has three pages: **Create** (derive start weight, preview the path, approve and ship, register the Uniswap
-route), **Position** (target vs actual value share from router `Swapped` events, fees earned, trades, dock), and
+The app has three pages: **Create** (derive start weight, pick a path shape, preview it, approve and ship, register the
+Uniswap route), **Position** (target vs actual value share from router `Swapped` events, fees earned, trades, dock), and
 **Demo tools** (fork time travel, an arbitrage loop that pushes the pool back to the reference price, swaps directly
 or through the Uniswap v4 pool). It signs with anvil's maker and taker accounts so the demo does not depend on a
 browser wallet.
@@ -102,7 +105,8 @@ browser wallet.
 ```
 contracts/
   src/libs/WeightedMath.sol          curve math
-  src/instructions/GlideSwap.sol     the opcode
+  src/instructions/GlideSwap.sol     the opcode (linear schedule)
+  src/instructions/GlideSwapPiecewise.sol  the opcode (piecewise schedule)
   src/opcodes/GlideOpcodes.sol       Aqua opcode set + GlideSwap
   src/routers/GlideSwapVMRouter.sol  the redeployed router
   src/periphery/GlideLens.sol        order / taker-traits / state helpers for clients

@@ -99,7 +99,9 @@ contract GlideHookTest is Test {
             duration: 1 days,
             wA0: 0.5e18,
             wA1: 0.5e18,
-            salt: 1
+            salt: 1,
+            weights: new uint64[](0),
+            durations: new uint32[](0)
         });
         order = lens.buildOrder(maker, params);
         orderHash = lens.orderHash(maker, params);

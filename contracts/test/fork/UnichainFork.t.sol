@@ -82,7 +82,9 @@ contract UnichainForkTest is Test {
             duration: 1 days,
             wA0: wA0,
             wA1: 0.7e18,
-            salt: 42
+            salt: 42,
+            weights: new uint64[](0),
+            durations: new uint32[](0)
         });
         order = lens.buildOrder(maker, params);
         orderHash = lens.orderHash(maker, params);

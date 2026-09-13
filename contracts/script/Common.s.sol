@@ -62,5 +62,15 @@ abstract contract Common is Script {
         p.wA0 = uint64(vm.parseJsonUint(j, ".params.wA0"));
         p.wA1 = uint64(vm.parseJsonUint(j, ".params.wA1"));
         p.salt = uint64(vm.parseJsonUint(j, ".params.salt"));
+        p.weights = new uint64[](0);
+        p.durations = new uint32[](0);
+        if (vm.keyExistsJson(j, ".params.weights")) {
+            uint256[] memory w = vm.parseJsonUintArray(j, ".params.weights");
+            uint256[] memory d = vm.parseJsonUintArray(j, ".params.durations");
+            p.weights = new uint64[](w.length);
+            p.durations = new uint32[](d.length);
+            for (uint256 i = 0; i < w.length; i++) p.weights[i] = uint64(w[i]);
+            for (uint256 i = 0; i < d.length; i++) p.durations[i] = uint32(d[i]);
+        }
     }
 }

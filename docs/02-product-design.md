@@ -42,7 +42,7 @@ The maker is the star of the product. Takers do not need to know Glide exists; t
 1. Connect a wallet holding both tokens. Both sides must be non-zero: a weighted curve is undefined with an empty reserve, so a maker who holds only ETH first needs a little USDC (or the reverse).
 2. Choose the pair, e.g. ETH and USDC, and how much of each to expose.
 3. Enter reference prices. The **start split** is *derived* from the value split of the exposed amounts, so the position opens exactly at the market price. If it were chosen freely, arbitrage would take the gap from the maker in the first trade.
-4. Choose the **end split** and the **window**. A preview chart shows the path.
+4. Choose the **end split**, the **window**, and a **path shape**: linear, ease in, ease out, S-curve, hold then move, or move then hold. A preview chart shows the path.
 5. Choose a **fee** takers pay on each trade, e.g. 0.30%.
 6. Approve the tokens once and click **Ship**. The position is live. Tokens remain in the wallet.
 
@@ -111,7 +111,7 @@ Yes, we build a frontend. It is what makes "your tokens never leave your wallet"
 ## 7. What we are not building
 
 - No support for more than two tokens per position.
-- No non-linear glide paths (only linear interpolation between start and end split). Additive later: a second opcode with a piecewise schedule.
+- Path shapes are limited to the six presets in the app (linear, ease in, ease out, S-curve, hold then move, move then hold). The protocol accepts any piecewise-linear schedule of up to 20 segments.
 - No price guardrail opcode. `RequireMinRate` from stock SwapVM can be added to the program later without touching the curve.
 - No keeper, bot, or off-chain service.
 - No mainnet deployment. Fork only, per the 1inch rules.

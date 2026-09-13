@@ -5,6 +5,8 @@
 #   terminal 2:  ./scripts/demo.sh            # deploy, ship, swap direct, advance time, swap via Uniswap
 #
 # Uses anvil's default funded accounts: 0 deployer, 1 maker, 2 taker.
+# For a non-linear path, ship with a schedule instead (weights in WAD, durations in seconds summing to DURATION), e.g.
+#   WEIGHTS=166666666666666666,166666666666666666,700000000000000000 DURATIONS=21600,64800 ... forge script script/Ship.s.sol ...
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

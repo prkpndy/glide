@@ -15,13 +15,64 @@ function d() {
 
 // ---- pure helpers (mirror GlideSwap.weightAt and WeightedMath.spotOutPerIn) ----
 
+function lerp(w0: bigint, w1: bigint, elapsed: number, dur: number): bigint {
+  const e = BigInt(elapsed);
+  const d = BigInt(dur);
+  return w1 >= w0 ? w0 + ((w1 - w0) * e) / d : w0 - ((w0 - w1) * e) / d;
+}
+
+/** mirrors GlideSwap.weightAt (linear) and GlideSwapPiecewise.weightAt (schedule) */
 export function weightAt(p: GlideParams, t: number): bigint {
   if (t <= p.start) return p.wA0;
-  const end = p.start + p.duration;
-  if (t >= end) return p.wA1;
-  const elapsed = BigInt(t - p.start);
-  const dur = BigInt(p.duration);
-  return p.wA1 >= p.wA0 ? p.wA0 + ((p.wA1 - p.wA0) * elapsed) / dur : p.wA0 - ((p.wA0 - p.wA1) * elapsed) / dur;
+  if (p.weights.length === 0) {
+    if (t >= p.start + p.duration) return p.wA1;
+    return lerp(p.wA0, p.wA1, t - p.start, p.duration);
+  }
+  let rem = t - p.start;
+  for (let i = 0; i < p.durations.length; i++) {
+    const d = p.durations[i];
+    if (rem <= d) return lerp(p.weights[i], p.weights[i + 1], rem, d);
+    rem -= d;
+  }
+  return p.weights[p.weights.length - 1];
+}
+
+export type Shape = "linear" | "ease-in" | "ease-out" | "s-curve" | "hold-then-move" | "move-then-hold";
+export const SHAPES: { id: Shape; label: string; hint: string }[] = [
+  { id: "linear", label: "Linear", hint: "steady conversion, one straight line" },
+  { id: "ease-in", label: "Ease in", hint: "slow start, fast finish" },
+  { id: "ease-out", label: "Ease out", hint: "fast start, slow finish" },
+  { id: "s-curve", label: "S-curve", hint: "gentle at both ends, fastest in the middle" },
+  { id: "hold-then-move", label: "Hold, then move", hint: "keep the start split for the first half" },
+  { id: "move-then-hold", label: "Move, then hold", hint: "convert in the first half, then rest" },
+];
+
+/** piecewise schedule for a shape; linear returns empty arrays so the plain GlideSwap opcode is used */
+export function schedule(shape: Shape, wA0: bigint, wA1: bigint, duration: number): { weights: bigint[]; durations: number[] } {
+  if (shape === "linear") return { weights: [], durations: [] };
+  const f: (x: number) => number =
+    shape === "ease-in" ? (x) => x * x
+    : shape === "ease-out" ? (x) => 1 - (1 - x) * (1 - x)
+    : shape === "s-curve" ? (x) => x * x * (3 - 2 * x)
+    : shape === "hold-then-move" ? (x) => (x < 0.5 ? 0 : (x - 0.5) * 2)
+    : (x) => Math.min(1, x * 2);
+  const n = shape === "hold-then-move" || shape === "move-then-hold" ? 2 : 12;
+  const SCALE = 1_000_000n;
+  const weights: bigint[] = [];
+  const durations: number[] = [];
+  for (let i = 0; i <= n; i++) {
+    const fx = BigInt(Math.round(f(i / n) * 1e6));
+    weights.push(wA0 + ((wA1 - wA0) * fx) / SCALE);
+  }
+  weights[0] = wA0;
+  weights[n] = wA1;
+  let used = 0;
+  for (let i = 0; i < n; i++) {
+    const d = i === n - 1 ? duration - used : Math.floor(duration / n);
+    durations.push(d);
+    used += d;
+  }
+  return { weights, durations };
 }
 
 export function deriveStartWeight(valueA: bigint, valueB: bigint): bigint {
@@ -94,6 +145,8 @@ function lensParams(p: GlideParams) {
     wA0: p.wA0,
     wA1: p.wA1,
     salt: p.salt,
+    weights: p.weights,
+    durations: p.durations,
   } as const;
 }
 
