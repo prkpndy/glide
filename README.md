@@ -77,6 +77,9 @@ pre-funds it).
 Requirements: Foundry (forge 1.5+), Node 20+, network access for the Unichain fork.
 
 ```bash
+git clone --recursive <this repo>    # dependencies are git submodules under contracts/lib
+# (already cloned without them? run: git submodule update --init --recursive)
+
 # contracts
 cd contracts
 forge build                          # SwapVM + Glide, solc 0.8.30, via_ir
@@ -88,6 +91,8 @@ forge test --match-path test/fork/UnichainFork.t.sol   # needs RPC; UNICHAIN_RPC
 anvil --port 8546 --fork-url https://mainnet.unichain.org --fork-block-number 58230608 --chain-id 130
 # terminal 2: deploy, ship a USDC/WETH glide, swap directly, jump 12h, swap through Uniswap both ways
 RPC=http://127.0.0.1:8546 ./scripts/demo.sh
+# or only seed and deploy, and ship from the web app instead
+RPC=http://127.0.0.1:8546 ./scripts/setup.sh
 
 # web app (reads contracts/deployments/*.json)
 cd ../web && npm install && npm run dev      # http://localhost:3000, RPC defaults to 127.0.0.1:8546
