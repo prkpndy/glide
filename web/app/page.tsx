@@ -30,10 +30,10 @@ export default function CreatePage() {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!deployment) return;
+    if (!deployment || !s.ready) return;
     tokenMeta(deployment.tokenA).then(setMetaA).catch(() => {});
     tokenMeta(deployment.tokenB).then(setMetaB).catch(() => {});
-  }, []);
+  }, [s.ready]);
 
   useEffect(() => {
     if (!deployment || !s.ready) return;
@@ -53,7 +53,7 @@ export default function CreatePage() {
       const wA0 = deriveStartWeight(valueA, valueB);
       const wA1 = pctToWad(endPct);
       const feeBps = Math.round(Number(feePct || "0") * 1e5); // percent -> 1e7 units
-      const start = s.now || Math.floor(Date.now() / 1000);
+      const start = s.now;
       const sched = schedule(shape, wA0, wA1, hours * 3600);
       const params: GlideParams = { tokenA: metaA.address, tokenB: metaB.address, feeBps, start, duration: hours * 3600, wA0, wA1, salt: BigInt(start), ...sched };
       // pool spot (B per A) vs reference, in raw units
@@ -77,7 +77,7 @@ export default function CreatePage() {
   if (s.role !== "maker") problems.push("switch to the maker account in the header to ship");
 
   async function onShip() {
-    if (!derived || !metaA || !metaB) return;
+    if (!s.ready || !derived || !metaA || !metaB) return;
     setError(undefined);
     setBusy("starting");
     try {
@@ -199,7 +199,7 @@ export default function CreatePage() {
           {error && <div className="log err">{error}</div>}
 
           <div className="btn-row" style={{ marginTop: 6 }}>
-            <button className="btn" disabled={!derived || problems.length > 0 || !!busy} onClick={onShip}>
+            <button className="btn" disabled={!s.ready || !derived || problems.length > 0 || !!busy} onClick={onShip}>
               {busy ? busy : "Approve & ship"}
             </button>
           </div>

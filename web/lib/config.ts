@@ -4,6 +4,9 @@ import positionsJson from "@/generated/positions.json";
 
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? "130");
 export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL ?? "http://127.0.0.1:8546";
+if (!["localhost", "127.0.0.1", "[::1]"].includes(new URL(RPC_URL).hostname)) {
+  throw new Error("The demo accounts can only connect to a local Anvil RPC.");
+}
 export const DEMO_MAKER_PK = (process.env.NEXT_PUBLIC_DEMO_MAKER_PK ??
   "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d") as Hex;
 export const DEMO_TAKER_PK = (process.env.NEXT_PUBLIC_DEMO_TAKER_PK ??

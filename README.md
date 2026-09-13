@@ -12,6 +12,71 @@ a single wallet, with no pool contract holding the money.
 Built for ETHOnline 2026. Submitted to **1inch: Build an Aqua App** and **Uniswap Foundation: Best Uniswap Stack
 Contribution**.
 
+## Try the demo (judges)
+
+Open the **hosted frontend linked in our ETHGlobal submission** after starting Anvil and running setup below.
+The frontend runs on Vercel and connects to an Anvil fork on **your own computer**. Setup funds the demo maker/taker
+accounts and deploys Glide locally; all trades use fork tokens. You do not need to install the frontend or connect MetaMask.
+
+You need **Git**, **Foundry (`forge`, `cast`, and `anvil`, version 1.5+)**, an internet connection for the Unichain fork,
+and a desktop browser. Use the same repository version as the submission.
+
+### 1. Start Anvil — terminal 1
+
+```bash
+anvil --host 127.0.0.1 --port 8546 \
+  --fork-url https://mainnet.unichain.org \
+  --fork-block-number 58230608 \
+  --chain-id 130
+```
+
+Leave this terminal running while you use the demo. Start with a fresh fork and keep the default Anvil accounts.
+Anvil accepts browser requests by default; it listens only on your computer at `127.0.0.1:8546`.
+
+### 2. Deploy and fund the demo — terminal 2
+
+```bash
+git clone --recursive https://github.com/prkpndy/glide.git
+cd glide/contracts
+forge build
+RPC=http://127.0.0.1:8546 ./scripts/setup.sh
+```
+
+If you already cloned the repository, run `git submodule update --init --recursive` from its root before building.
+Wait for setup to report success. It gives the maker **5,000 USDC + 20 WETH**, funds the taker, and deploys the Glide
+router, lens, hook and Uniswap pool. Run setup once per fresh fork. Its fixed deployment salt makes the contract
+addresses match the hosted frontend when you use the same contract build.
+
+### 3. Connect the hosted frontend
+
+Open the hosted frontend in a browser on the same computer and click **Connect local fork** in the header.
+Allow **local network access** if your browser asks. A block number in the header means the connection succeeded.
+Keep Anvil running; you can now create positions and trade from the hosted page.
+
+Your browser sends requests directly to your local Anvil node. Each judge gets an independent fork; other visitors
+cannot see or change your demo through the hosted site.
+
+### What to try
+
+1. On **Create**, keep the **maker** account selected. Keep the default amounts, choose **Linear** or **S-curve**, and click **Approve & ship**.
+2. On **Position**, inspect the target share, actual share and exposed balances.
+3. Open **Demo tools**, switch to **taker** in the header, and click **+6h** to advance the fork's clock.
+4. Click **Arb until within 50 bps**. The trades move the maker's allocation towards the target and earn fees.
+5. Keep the Uniswap route selected and click **Swap** to trade through the v4 hook. Return to **Position** to see the trades and fees.
+6. Switch back to **maker** and click **Dock position** to stop the strategy.
+
+### If the connection fails
+
+- **Cannot reach Anvil:** check that terminal 1 is still running on port `8546`, then click **Connect local fork** again.
+- **Browser blocks localhost:** allow local network access for the hosted site and retry. See [Chrome's permission guide](https://developer.chrome.com/blog/local-network-access).
+  If you started Anvil with `--allow-origin`, that value must match the hosted page's origin exactly.
+- **Contracts do not match:** use the submission's repository version, restart a fresh fork with the command above,
+  and run `setup.sh` again with its default accounts and deployment salt.
+- **Old position after restarting Anvil:** click **Forget** on Position, then create a new one. Restarting a fresh fork
+  resets its trades and positions; the browser may still remember the previous position.
+
+## How it works
+
 ```
                        maker's wallet (tokens never leave until a trade)
                                   ▲ pull / push via Aqua
@@ -72,38 +137,53 @@ Limits, stated plainly: exact-in only; ERC20 currencies only (Aqua is ERC20-only
 the PoolManager's aggregate float, which holds on any live deployment and not on an empty test manager (the unit test
 pre-funds it).
 
-## Run it
+## Local development and tests (optional)
 
-Requirements: Foundry (forge 1.5+), Node 20+, network access for the Unichain fork.
+The hosted demo above does not require Node.js. To run the frontend locally, install Node 20+ and start/setup Anvil
+as described above. Then, from the repository root:
 
 ```bash
-git clone --recursive <this repo>    # dependencies are git submodules under contracts/lib
-# (already cloned without them? run: git submodule update --init --recursive)
-
-# contracts
-cd contracts
-forge build                          # SwapVM + Glide, solc 0.8.30, via_ir
-FOUNDRY_PROFILE=v4 forge build       # Uniswap PoolManager (solc 0.8.26, no via_ir) -> out-v4/
-forge test --no-match-path 'test/fork/*'          # 47 unit, fuzz, invariant and hook tests
-forge test --match-path test/fork/UnichainFork.t.sol   # needs RPC; UNICHAIN_RPC_URL overrides the public one
-
-# end-to-end on a local fork (terminal 1)
-anvil --port 8546 --fork-url https://mainnet.unichain.org --fork-block-number 58230608 --chain-id 130
-# terminal 2: deploy, ship a USDC/WETH glide, swap directly, jump 12h, swap through Uniswap both ways
-RPC=http://127.0.0.1:8546 ./scripts/demo.sh
-# or only seed and deploy, and ship from the web app instead
-RPC=http://127.0.0.1:8546 ./scripts/setup.sh
-
-# web app (reads contracts/deployments/*.json)
-cd ../web && npm install && npm run dev      # http://localhost:3000, RPC defaults to 127.0.0.1:8546
-node scripts/e2e.mjs                         # drives create → time travel → arb → Uniswap swap in headless Chromium
+cd web
+npm ci
+npm run dev                         # http://localhost:3000; connects to Anvil automatically
+# In another terminal, from web/:
+node scripts/e2e.mjs                 # create → time travel → arb → Uniswap swap
 ```
 
-The app has three pages: **Create** (derive start weight, pick a path shape, preview it, approve and ship, register the
-Uniswap route), **Position** (target vs actual value share from router `Swapped` events, fees earned, trades, dock), and
-**Demo tools** (fork time travel, an arbitrage loop that pushes the pool back to the reference price, swaps directly
-or through the Uniswap v4 pool). It signs with anvil's maker and taker accounts so the demo does not depend on a
-browser wallet.
+To run the contract tests, from the repository root:
+
+```bash
+cd contracts
+forge build
+FOUNDRY_PROFILE=v4 forge build       # separate PoolManager artifact required by hook tests
+forge test --no-match-path 'test/fork/*'
+forge test --match-path test/fork/UnichainFork.t.sol
+```
+
+The fork tests need RPC access; `UNICHAIN_RPC_URL` overrides the public endpoint. For a terminal-only demo on a fresh
+Anvil fork, run `RPC=http://127.0.0.1:8546 ./scripts/demo.sh` from `contracts/` instead of `setup.sh`.
+
+<details>
+<summary>Publishing the frontend (maintainers)</summary>
+
+After building contracts and successfully running `setup.sh`, from `web/`:
+
+```bash
+npm ci
+npm run sync       # update the ABI/deployment snapshot under generated/
+npm run build      # build from that snapshot without running Forge
+```
+
+Review `web/generated/` with the code. Import the repository into Vercel with **Root Directory = `web`**,
+**Framework = Next.js**, **Install = `npm ci`**, and **Build = `npm run build`**. `web/vercel.json` supplies the build
+settings. The default RPC (`http://127.0.0.1:8546`) and chain ID (`130`) match the judges' setup; no Vercel environment
+variables are required. Remove any old hosted-chain overrides for `NEXT_PUBLIC_RPC_URL` and `NEXT_PUBLIC_CHAIN_ID`.
+
+Vercel serves the frontend snapshot and never connects to Anvil itself. After changing contracts, rebuild, run setup
+and sync, then redeploy the frontend. Judges must use that same repository version on a fresh fork. Add the deployed
+frontend URL to the submission's Demo link.
+
+</details>
 
 ## Repository map
 

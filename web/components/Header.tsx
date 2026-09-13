@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "@/lib/session";
 import { fmtTime, short } from "@/lib/format";
-import { deployment, RPC_URL } from "@/lib/config";
+import { RPC_URL } from "@/lib/config";
 
 const links = [
   { href: "/", label: "Create" },
@@ -48,10 +48,14 @@ export default function Header() {
             </>
           ) : (
             <>
-              <span className="dot bad" /> {deployment ? `no RPC at ${RPC_URL}` : "no deployment; run contracts/scripts/demo.sh"}
+              <button className="btn ghost small" disabled={s.connecting} onClick={s.connect}>
+                {s.connecting ? "Connecting…" : "Connect local fork"}
+              </button>
             </>
           )}
         </div>
+        <div className="chain">Your computer · {RPC_URL}</div>
+        {s.error && <div className="warn" role="alert" style={{ maxWidth: 380, fontSize: 12 }}>{s.error}</div>}
       </div>
     </header>
   );

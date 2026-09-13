@@ -32,14 +32,16 @@ export function usePosition(): PositionView {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
+    // Hydrate browser storage after server rendering.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPositionState(loadPosition());
   }, []);
 
   useEffect(() => {
-    if (!deployment) return;
+    if (!deployment || !s.ready) return;
     tokenMeta(deployment.tokenA).then(setMetaA).catch(() => {});
     tokenMeta(deployment.tokenB).then(setMetaB).catch(() => {});
-  }, []);
+  }, [s.ready]);
 
   useEffect(() => {
     if (!position || !s.ready) return;

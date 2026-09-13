@@ -1,12 +1,14 @@
-// Copies contract ABIs and the local deployment files from ../contracts into ./generated.
+// Copies ABIs and the selected local deployment into the checked-in frontend snapshot.
 // Run after `forge build` and after `scripts/demo.sh` (or the Deploy/Ship scripts).
-import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+// Vercel builds from this snapshot; it never needs Foundry or a connection to Anvil.
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const contracts = join(here, "..", "..", "contracts");
 const out = join(here, "..", "generated");
+const chainId = process.env.NEXT_PUBLIC_CHAIN_ID ?? "130";
 mkdirSync(out, { recursive: true });
 
 const artifacts = {
@@ -27,19 +29,15 @@ for (const [name, rel] of Object.entries(artifacts)) {
   const { abi } = JSON.parse(readFileSync(path, "utf8"));
   ts += `export const ${name}Abi = ${JSON.stringify(abi)} as const;\n`;
 }
-writeFileSync(join(out, "abis.ts"), ts);
-
 const deployments = {};
-const positions = {};
 const dir = join(contracts, "deployments");
-if (existsSync(dir)) {
-  for (const f of readdirSync(dir)) {
-    const m = f.match(/^(position-)?(\d+)\.json$/);
-    if (!m) continue;
-    const json = JSON.parse(readFileSync(join(dir, f), "utf8"));
-    (m[1] ? positions : deployments)[m[2]] = json;
-  }
-}
+const path = join(dir, `${chainId}.json`);
+if (!existsSync(path)) throw new Error(`Missing ${path}; run contracts/scripts/setup.sh first.`);
+deployments[chainId] = JSON.parse(readFileSync(path, "utf8"));
+if (deployments[chainId].chainId !== Number(chainId)) throw new Error("Deployment chain ID does not match the selected chain.");
+writeFileSync(join(out, "abis.ts"), ts);
 writeFileSync(join(out, "deployments.json"), JSON.stringify(deployments, null, 2));
-writeFileSync(join(out, "positions.json"), JSON.stringify(positions, null, 2));
-console.log(`synced ${Object.keys(artifacts).length} ABIs, ${Object.keys(deployments).length} deployment(s), ${Object.keys(positions).length} position(s)`);
+const positionPath = join(dir, `position-${chainId}.json`);
+const positions = existsSync(positionPath) ? { [chainId]: JSON.parse(readFileSync(positionPath, "utf8")) } : {};
+writeFileSync(join(out, "positions.json"), JSON.stringify(positions, null, 2) + "\n");
+console.log(`synced ${Object.keys(artifacts).length} ABIs and deployment for chain ${chainId}; review generated/ before publishing`);

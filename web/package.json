@@ -5,7 +5,6 @@
   "scripts": {
     "sync": "node scripts/sync.mjs",
     "predev": "node scripts/sync.mjs",
-    "prebuild": "node scripts/sync.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

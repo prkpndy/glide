@@ -6,6 +6,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 export RPC=${RPC:-http://127.0.0.1:8546}
+export DEPLOY_SALT=${DEPLOY_SALT:-1} # same fresh fork + contract build => same addresses as the hosted frontend
 export PRIVATE_KEY=${PRIVATE_KEY:-0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80}
 MAKER_PK=${MAKER_PK:-0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d}
 TAKER_PK=${TAKER_PK:-0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a}
@@ -24,7 +25,7 @@ cast rpc anvil_setStorageAt "$USDC" "$(cast index address "$TAKER" 9)" "$(cast t
 echo "maker $MAKER  WETH $(cast call $WETH 'balanceOf(address)(uint256)' $MAKER --rpc-url $RPC)  USDC $(cast call $USDC 'balanceOf(address)(uint256)' $MAKER --rpc-url $RPC)"
 
 log "deploying GlideSwapVMRouter, GlideLens, GlideHook and the USDC/WETH pool"
-forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast 2>&1 | grep -E 'router|lens|hook|swapRouter|written|Error|revert' || true
+forge script script/Deploy.s.sol --rpc-url "$RPC" --broadcast
 rm -f deployments/position-130.json
 
 log "done. next: cd ../web && npm run dev   (the app reads deployments/130.json)"

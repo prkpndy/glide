@@ -15,5 +15,8 @@ web/out/
 !.env.example
 .DS_Store
 contracts/deployments/*.json
-web/generated/
+web/generated/*
+!web/generated/abis.ts
+!web/generated/deployments.json
+!web/generated/positions.json
 web/e2e-shots/
